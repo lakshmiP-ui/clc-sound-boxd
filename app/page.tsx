@@ -55,6 +55,8 @@ const sampleReviews = [
 export default async function Home() {
   const supabase = await createClient()
   
+  const { data: { user } } = await supabase.auth.getUser()
+
   // Fetch albums from database
   const { data: albums } = await supabase
     .from("albums")
@@ -77,7 +79,7 @@ export default async function Home() {
       <Header />
 
       <main className="flex-1">
-        <HeroSection />
+        <HeroSection isLoggedIn={!!user} />
 
         {/* Popular Albums */}
         <section className="container mx-auto px-4 py-12">
@@ -118,20 +120,22 @@ export default async function Home() {
         </section>
 
         {/* Simple CTA */}
-        <section className="container mx-auto px-4 py-16 text-center">
-          <h2 className="text-2xl font-semibold font-[family-name:var(--font-display)] text-foreground mb-3">
-            Join Soundboxd today
-          </h2>
-          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Track your listening history and connect with music lovers worldwide.
-          </p>
-          <Link
-            href="/auth/sign-up"
-            className="inline-flex items-center justify-center h-10 px-6 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
-          >
-            Create account
-          </Link>
-        </section>
+        {!user && (
+          <section className="container mx-auto px-4 py-16 text-center">
+            <h2 className="text-2xl font-semibold font-[family-name:var(--font-display)] text-foreground mb-3">
+              Join Soundboxd today
+            </h2>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Track your listening history and connect with music lovers worldwide.
+            </p>
+            <Link
+              href="/auth/sign-up"
+              className="inline-flex items-center justify-center h-10 px-6 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+            >
+              Create account
+            </Link>
+          </section>
+        )}
       </main>
 
       <Footer />

@@ -10,7 +10,7 @@ const featuredAlbums = [
   { id: '5', cover: 'https://picsum.photos/seed/album5/400/400', title: 'Blonde' },
 ]
 
-export function HeroSection() {
+export function HeroSection({ isLoggedIn }: { isLoggedIn?: boolean }) {
   return (
     <section className="py-12 md:py-16">
       <div className="container mx-auto px-4">
@@ -26,10 +26,12 @@ export function HeroSection() {
               Rate, review, and discover music with a community of passionate listeners.
             </p>
             <div className="mt-6 flex flex-wrap gap-3 justify-center lg:justify-start">
-              <Button size="lg" asChild>
-                <Link href="/auth/sign-up">Create account</Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
+              {!isLoggedIn && (
+                <Button size="lg" asChild>
+                  <Link href="/auth/sign-up">Create account</Link>
+                </Button>
+              )}
+              <Button size="lg" variant={isLoggedIn ? "default" : "outline"} asChild>
                 <Link href="/albums">Browse albums</Link>
               </Button>
             </div>
