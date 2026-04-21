@@ -12,45 +12,7 @@ import { Calendar, Disc, Star, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
 
-// Mock data for favorites - in production, fetch from Supabase
-const favoriteAlbums = [
-  {
-    id: "1",
-    title: "Blonde",
-    artist: "Frank Ocean",
-    coverUrl: "https://picsum.photos/seed/blonde/400/400",
-    year: 2016,
-    rating: 5,
-    reviewCount: 45230,
-  },
-  {
-    id: "2",
-    title: "In Rainbows",
-    artist: "Radiohead",
-    coverUrl: "https://picsum.photos/seed/rainbows/400/400",
-    year: 2007,
-    rating: 4.5,
-    reviewCount: 38920,
-  },
-  {
-    id: "3",
-    title: "To Pimp a Butterfly",
-    artist: "Kendrick Lamar",
-    coverUrl: "https://picsum.photos/seed/butterfly/400/400",
-    year: 2015,
-    rating: 5,
-    reviewCount: 52180,
-  },
-  {
-    id: "4",
-    title: "Currents",
-    artist: "Tame Impala",
-    coverUrl: "https://picsum.photos/seed/currents/400/400",
-    year: 2015,
-    rating: 4.5,
-    reviewCount: 34560,
-  },
-]
+// Removed local mock favoriteAlbums array
 
 interface Profile {
   id: string
@@ -66,17 +28,22 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [isFollowing, setIsFollowing] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  const [followersCount, setFollowersCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
+  const [favoriteAlbumsData, setFavoriteAlbumsData] = useState<any[]>([])
+  const [albumsCount, setAlbumsCount] = useState(0)
+  const [reviewsCount, setReviewsCount] = useState(0)
+
   const supabase = createClient()
 
   useEffect(() => {
     const fetchData = async () => {
       const { id } = await params
       
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser()
       setCurrentUser(user)
 
-      // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -85,12 +52,56 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
 
       if (profileData) {
         setProfile(profileData)
+
+        // Check if current user is following this profile
+        if (user && user.id !== id) {
+           const { data: isFollowingData } = await supabase.from('follows').select('*').eq('follower_id', user.id).eq('following_id', id).maybeSingle()
+           if (isFollowingData) setIsFollowing(true)
+        }
+
+        // Fetch follower counts
+        const { count: followers } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', id)
+        const { count: following } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', id)
+        setFollowersCount(followers || 0)
+        setFollowingCount(following || 0)
+
+        // Fetch favorite albums (liked albums) joined with albums table
+        const { data: likedAlbums } = await supabase.from('reviews').select('*, albums(*)').eq('user_id', id).eq('liked', true).limit(6)
+        if (likedAlbums) {
+          const mapped = likedAlbums.filter((r: any) => r.albums).map((r: any) => ({
+            id: r.albums.id,
+            title: r.albums.title,
+            artist: r.albums.artist,
+            coverUrl: r.albums.cover_url || "https://picsum.photos/seed/default/400/400",
+            year: r.albums.year,
+            rating: 5,
+            reviewCount: 0
+          }))
+          setFavoriteAlbumsData(mapped)
+          setAlbumsCount(mapped.length)
+        }
+
+        const { count: totalReviews } = await supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('user_id', id)
+        setReviewsCount(totalReviews || 0)
       }
       
       setLoading(false)
     }
     fetchData()
   }, [params, supabase])
+
+  const handleFollow = async () => {
+    if (!currentUser || !profile) return
+    const newValue = !isFollowing
+    setIsFollowing(newValue)
+    if (newValue) {
+      setFollowersCount(prev => prev + 1)
+      await supabase.from('follows').insert({ follower_id: currentUser.id, following_id: profile.id })
+    } else {
+      setFollowersCount(prev => Math.max(0, prev - 1))
+      await supabase.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', profile.id)
+    }
+  }
 
   const isOwnProfile = currentUser?.id === profile?.id
 
@@ -146,7 +157,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
                     <Button
                       size="sm"
                       variant={isFollowing ? "outline" : "default"}
-                      onClick={() => setIsFollowing(!isFollowing)}
+                      onClick={handleFollow}
                     >
                       {isFollowing ? "Following" : "Follow"}
                     </Button>
@@ -175,22 +186,22 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
             <div className="grid grid-cols-4 gap-4 mt-6 max-w-md">
               <div className="text-center">
                 <Disc className="h-4 w-4 mx-auto mb-1 text-primary" />
-                <p className="text-lg font-semibold">0</p>
-                <p className="text-xs text-muted-foreground">Albums</p>
+                <p className="text-lg font-semibold">{albumsCount}</p>
+                <p className="text-xs text-muted-foreground">Liked Albums</p>
               </div>
               <div className="text-center">
                 <Star className="h-4 w-4 mx-auto mb-1 text-primary" />
-                <p className="text-lg font-semibold">0</p>
+                <p className="text-lg font-semibold">{reviewsCount}</p>
                 <p className="text-xs text-muted-foreground">Reviews</p>
               </div>
               <div className="text-center">
                 <Users className="h-4 w-4 mx-auto mb-1 text-primary" />
-                <p className="text-lg font-semibold">0</p>
+                <p className="text-lg font-semibold">{followingCount}</p>
                 <p className="text-xs text-muted-foreground">Following</p>
               </div>
               <div className="text-center">
                 <Users className="h-4 w-4 mx-auto mb-1 text-primary" />
-                <p className="text-lg font-semibold">0</p>
+                <p className="text-lg font-semibold">{followersCount}</p>
                 <p className="text-xs text-muted-foreground">Followers</p>
               </div>
             </div>
@@ -203,9 +214,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
             Favorite Albums
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {favoriteAlbums.map((album) => (
-              <AlbumCard key={album.id} {...album} />
-            ))}
+            {favoriteAlbumsData.length > 0 ? (
+              favoriteAlbumsData.map((album) => (
+                <AlbumCard key={album.id} {...album} />
+              ))
+            ) : (
+              <p className="text-muted-foreground col-span-full">No favorite albums yet.</p>
+            )}
           </div>
         </section>
       </main>

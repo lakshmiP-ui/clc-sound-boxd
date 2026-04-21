@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Header } from "@/components/header"
@@ -9,38 +9,171 @@ import { StarRating } from "@/components/star-rating"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Heart, Plus, Eye, Calendar, Clock, Disc } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import type { User } from "@supabase/supabase-js"
 
-// Mock album data - in production, fetch from Supabase
-const albumData = {
-  id: "1",
-  title: "Blonde",
-  artist: "Frank Ocean",
-  coverUrl: "https://picsum.photos/seed/blonde/800/800",
-  year: 2016,
-  rating: 4.5,
-  ratingCount: 45230,
-  genres: ["R&B", "Art Pop"],
-  runtime: "60:07",
-  tracks: 17,
-  tracklist: [
-    { number: 1, title: "Nikes", duration: "5:14" },
-    { number: 2, title: "Ivy", duration: "4:09" },
-    { number: 3, title: "Pink + White", duration: "3:04" },
-    { number: 4, title: "Solo", duration: "4:17" },
-    { number: 5, title: "Self Control", duration: "4:09" },
-    { number: 6, title: "Nights", duration: "5:07" },
-    { number: 7, title: "White Ferrari", duration: "4:08" },
-    { number: 8, title: "Seigfried", duration: "5:34" },
-    { number: 9, title: "Godspeed", duration: "2:57" },
-  ],
-}
+export default function AlbumPage({ params }: { params: Promise<{ id: string }> }) {
+  const [albumData, setAlbumData] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
-export default function AlbumPage() {
   const [userRating, setUserRating] = useState<number>(0)
   const [isLiked, setIsLiked] = useState(false)
   const [isListened, setIsListened] = useState(false)
   const [isInWatchlist, setIsInWatchlist] = useState(false)
   const [review, setReview] = useState("")
+  const [isPosting, setIsPosting] = useState(false)
+
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { id } = await params
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+
+      // Fetch album
+      const { data: album } = await supabase.from('albums').select('*').eq('id', id).single()
+      if (album) {
+        setAlbumData({
+           id: album.id,
+           title: album.title,
+           artist: album.artist,
+           coverUrl: album.cover_url || "https://picsum.photos/seed/default/800/800",
+           year: album.year,
+           rating: 4.5,
+           ratingCount: 0,
+           genres: album.genre ? [album.genre] : ["Unknown"],
+           runtime: "N/A",
+           tracks: 10,
+           tracklist: [] 
+        })
+      }
+
+      if (user && album) {
+        // Fetch review
+        const { data: reviewData } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('album_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (reviewData) {
+          setIsLiked(reviewData.liked)
+          setReview(reviewData.review_text || "")
+          setUserRating(Number(reviewData.rating) || 0)
+          if (reviewData.listened_at) setIsListened(true)
+        }
+
+        // Fetch watchlist
+        const { data: listData } = await supabase
+          .from('lists')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('title', 'Watchlist')
+          .maybeSingle()
+
+        if (listData) {
+          const { data: listAlbum } = await supabase
+            .from('list_albums')
+            .select('*')
+            .eq('list_id', listData.id)
+            .eq('album_id', id)
+            .maybeSingle()
+          
+          if (listAlbum) setIsInWatchlist(true)
+        }
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [params, supabase])
+
+  const upsertReview = async (updates: any) => {
+    if (!user || !albumData) return
+    const { data: existing } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('album_id', albumData.id)
+      .maybeSingle()
+
+    const payload = existing ? { ...existing, ...updates, updated_at: new Date().toISOString() } : {
+      user_id: user.id,
+      album_id: albumData.id,
+      ...updates
+    }
+    await supabase.from('reviews').upsert(payload, { onConflict: 'user_id, album_id' })
+  }
+
+  const handleLike = async () => {
+    if (!user) return alert("Please sign in first")
+    const newValue = !isLiked
+    setIsLiked(newValue)
+    await upsertReview({ liked: newValue })
+  }
+
+  const handleListen = async () => {
+    if (!user) return alert("Please sign in first")
+    const newValue = !isListened
+    setIsListened(newValue)
+    await upsertReview({ listened_at: newValue ? new Date().toISOString() : null })
+  }
+
+  const handleRating = async (rating: number) => {
+    if (!user) return alert("Please sign in first")
+    setUserRating(rating)
+    await upsertReview({ rating })
+  }
+
+  const handleReviewSubmit = async () => {
+    if (!user) return alert("Please sign in first")
+    if (!review.trim()) return
+    setIsPosting(true)
+    await upsertReview({ review_text: review })
+    setIsPosting(false)
+    alert("Review posted!")
+  }
+
+  const handleWatchlist = async () => {
+    if (!user) return alert("Please sign in first")
+    const newValue = !isInWatchlist
+    setIsInWatchlist(newValue)
+    
+    let { data: listData } = await supabase.from('lists').select('id').eq('user_id', user.id).eq('title', 'Watchlist').maybeSingle()
+    if (!listData) {
+      const { data: newList } = await supabase.from('lists').insert({ user_id: user.id, title: 'Watchlist', is_public: false }).select().single()
+      listData = newList
+    }
+    if (!listData) return
+
+    if (newValue) {
+      await supabase.from('list_albums').insert({ list_id: listData.id, album_id: albumData.id, position: 1 })
+    } else {
+      await supabase.from('list_albums').delete().eq('list_id', listData.id).eq('album_id', albumData.id)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center text-muted-foreground animate-pulse">Loading...</main>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (!albumData) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">Album not found</main>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -66,7 +199,7 @@ export default function AlbumPage() {
             {/* Info */}
             <div className="flex-1 space-y-4">
               <div className="flex flex-wrap gap-2">
-                {albumData.genres.map((genre) => (
+                {albumData.genres.map((genre: string) => (
                   <span key={genre} className="text-xs bg-secondary px-2 py-1 rounded-full text-muted-foreground">
                     {genre}
                   </span>
@@ -95,7 +228,7 @@ export default function AlbumPage() {
               {/* Your Rating */}
               <div className="pt-2">
                 <p className="text-sm text-muted-foreground mb-1">Your rating</p>
-                <StarRating rating={userRating} size="lg" interactive onRate={setUserRating} />
+                <StarRating rating={userRating} size="lg" interactive onRate={handleRating} />
               </div>
 
               {/* Actions */}
@@ -103,7 +236,7 @@ export default function AlbumPage() {
                 <Button
                   variant={isListened ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setIsListened(!isListened)}
+                  onClick={handleListen}
                 >
                   <Eye className="h-4 w-4 mr-1.5" />
                   {isListened ? "Listened" : "Mark listened"}
@@ -112,7 +245,7 @@ export default function AlbumPage() {
                   variant={isLiked ? "default" : "outline"}
                   size="sm"
                   className={isLiked ? "bg-red-500 hover:bg-red-600 text-white" : ""}
-                  onClick={() => setIsLiked(!isLiked)}
+                  onClick={handleLike}
                 >
                   <Heart className={`h-4 w-4 mr-1.5 ${isLiked ? "fill-current" : ""}`} />
                   Like
@@ -120,7 +253,7 @@ export default function AlbumPage() {
                 <Button
                   variant={isInWatchlist ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setIsInWatchlist(!isInWatchlist)}
+                  onClick={handleWatchlist}
                 >
                   <Plus className="h-4 w-4 mr-1.5" />
                   Watchlist
@@ -137,18 +270,22 @@ export default function AlbumPage() {
             <div>
               <h2 className="text-lg font-semibold font-[family-name:var(--font-display)] mb-4">Tracklist</h2>
               <div className="rounded-lg border border-border overflow-hidden">
-                {albumData.tracklist.map((track) => (
-                  <div
-                    key={track.number}
-                    className="flex items-center justify-between px-4 py-2.5 text-sm border-b border-border last:border-b-0 hover:bg-secondary/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-muted-foreground w-5">{track.number}</span>
-                      <span className="text-foreground">{track.title}</span>
+                {albumData.tracklist && albumData.tracklist.length > 0 ? (
+                  albumData.tracklist.map((track: any) => (
+                    <div
+                      key={track.number}
+                      className="flex items-center justify-between px-4 py-2.5 text-sm border-b border-border last:border-b-0 hover:bg-secondary/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground w-5">{track.number}</span>
+                        <span className="text-foreground">{track.title}</span>
+                      </div>
+                      <span className="text-muted-foreground">{track.duration}</span>
                     </div>
-                    <span className="text-muted-foreground">{track.duration}</span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="p-4 text-muted-foreground text-sm">Tracklist not available.</div>
+                )}
               </div>
             </div>
 
@@ -162,7 +299,9 @@ export default function AlbumPage() {
                   value={review}
                   onChange={(e) => setReview(e.target.value)}
                 />
-                <Button className="w-full">Post Review</Button>
+                <Button className="w-full" onClick={handleReviewSubmit} disabled={isPosting}>
+                  {isPosting ? "Posting..." : "Post Review"}
+                </Button>
               </div>
             </div>
           </div>
