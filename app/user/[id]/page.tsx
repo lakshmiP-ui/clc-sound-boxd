@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { AlbumCard } from "@/components/album-card"
+import { ReviewCard } from "@/components/review-card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, Disc, Star, Users } from "lucide-react"
@@ -32,6 +33,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const [favoriteAlbumsData, setFavoriteAlbumsData] = useState<any[]>([])
+  const [userReviews, setUserReviews] = useState<any[]>([])
   const [albumsCount, setAlbumsCount] = useState(0)
   const [reviewsCount, setReviewsCount] = useState(0)
 
@@ -79,6 +81,33 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
           }))
           setFavoriteAlbumsData(mapped)
           setAlbumsCount(mapped.length)
+        }
+
+        // Fetch written reviews
+        const { data: writtenReviews } = await supabase
+          .from('reviews')
+          .select('*, albums(*)')
+          .eq('user_id', id)
+          .not('review_text', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(10)
+
+        if (writtenReviews) {
+          const mapReviews = writtenReviews.filter((r: any) => r.albums).map((r: any) => ({
+             albumId: r.albums.id,
+             albumTitle: r.albums.title,
+             albumArtist: r.albums.artist,
+             albumCover: r.albums.cover_url || "https://picsum.photos/seed/default/400/400",
+             userId: profileData.id,
+             userName: profileData.display_name || profileData.username,
+             userAvatar: profileData.avatar_url || `https://picsum.photos/seed/${profileData.id}/100/100`,
+             rating: Number(r.rating) || 0,
+             reviewText: r.review_text,
+             likes: 0,
+             comments: 0,
+             date: new Date(r.created_at).toLocaleDateString()
+          }))
+          setUserReviews(mapReviews)
         }
 
         const { count: totalReviews } = await supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('user_id', id)
@@ -220,6 +249,22 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
               ))
             ) : (
               <p className="text-muted-foreground col-span-full">No favorite albums yet.</p>
+            )}
+          </div>
+        </section>
+
+        {/* Written Reviews */}
+        <section className="container mx-auto px-4 py-8 border-t border-border">
+          <h2 className="text-lg font-semibold font-[family-name:var(--font-display)] mb-4">
+            Recent Reviews
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {userReviews.length > 0 ? (
+              userReviews.map((review, index) => (
+                <ReviewCard key={index} {...review} />
+              ))
+            ) : (
+              <p className="text-muted-foreground col-span-full">No reviews written yet.</p>
             )}
           </div>
         </section>

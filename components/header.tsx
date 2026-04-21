@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Disc3, Search, User, LogOut } from 'lucide-react'
+import { Disc3, Search, User, LogOut, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
@@ -76,6 +76,12 @@ export function Header() {
             ) : user ? (
               <>
                 <Button variant="ghost" size="sm" asChild className="h-8 px-3">
+                  <Link href="/community">
+                    <Users className="h-4 w-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Community</span>
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" asChild className="h-8 px-3">
                   <Link href={`/user/${user.id}`}>
                     <User className="h-4 w-4 sm:mr-1.5" />
                     <span className="hidden sm:inline">Profile</span>
@@ -88,6 +94,12 @@ export function Header() {
               </>
             ) : (
               <>
+                <Button variant="ghost" size="sm" asChild className="h-8 px-3">
+                  <Link href="/community">
+                    <Users className="h-4 w-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Community</span>
+                  </Link>
+                </Button>
                 <Button variant="ghost" size="sm" asChild className="h-8">
                   <Link href="/auth/login">Sign in</Link>
                 </Button>
