@@ -19,6 +19,17 @@ export function Header() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+      if (user) {
+        // Self-heal: ensure profile exists for users created before the database trigger was active
+        const { data: profile } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle()
+        if (!profile) {
+          await supabase.from('profiles').insert({
+            id: user.id,
+            username: (user.email?.split('@')[0] || 'user') + Math.floor(Math.random() * 10000),
+            display_name: user.email?.split('@')[0] || 'User',
+          })
+        }
+      }
       setLoading(false)
     }
     getUser()
