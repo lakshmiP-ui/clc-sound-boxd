@@ -6,51 +6,7 @@ import { Footer } from "@/components/footer"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 
-// Sample reviews for display (will be dynamic once users create reviews)
-const sampleReviews = [
-  {
-    albumId: "1",
-    albumTitle: "Blonde",
-    albumArtist: "Frank Ocean",
-    albumCover: "https://picsum.photos/seed/blonde/200/200",
-    userId: "user1",
-    userName: "MusicLover92",
-    userAvatar: "https://picsum.photos/seed/user1/100/100",
-    rating: 5,
-    reviewText: "A masterpiece of introspection and vulnerability. Frank Ocean crafts an ethereal soundscape that perfectly captures the bittersweet nature of love and loss.",
-    likes: 342,
-    comments: 28,
-    date: "2 hours ago",
-  },
-  {
-    albumId: "3",
-    albumTitle: "To Pimp a Butterfly",
-    albumArtist: "Kendrick Lamar",
-    albumCover: "https://picsum.photos/seed/butterfly/200/200",
-    userId: "user2",
-    userName: "JazzHead",
-    userAvatar: "https://picsum.photos/seed/user2/100/100",
-    rating: 4.5,
-    reviewText: "A profound exploration of Black identity in America. The fusion of jazz, funk, and hip-hop creates something entirely new.",
-    likes: 256,
-    comments: 19,
-    date: "5 hours ago",
-  },
-  {
-    albumId: "4",
-    albumTitle: "Currents",
-    albumArtist: "Tame Impala",
-    albumCover: "https://picsum.photos/seed/currents/200/200",
-    userId: "user3",
-    userName: "PsychRocker",
-    userAvatar: "https://picsum.photos/seed/user3/100/100",
-    rating: 4,
-    reviewText: "Kevin Parker&apos;s most polished work. The production is immaculate, though some may miss the rawness of earlier releases.",
-    likes: 189,
-    comments: 12,
-    date: "8 hours ago",
-  },
-]
+// Removed static sampleReviews array
 
 export default async function Home() {
   const supabase = await createClient()
@@ -72,6 +28,29 @@ export default async function Home() {
     year: album.year,
     rating: 4.5, // Default rating until we calculate from reviews
     reviewCount: 0,
+  })) || []
+
+  // Fetch recent reviews with text
+  const { data: recentReviewsData } = await supabase
+    .from("reviews")
+    .select("*, profiles(*), albums(*)")
+    .not("review_text", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(6)
+
+  const recentReviews = recentReviewsData?.filter((r: any) => r.albums && r.profiles).map((r: any) => ({
+    albumId: r.albums.id,
+    albumTitle: r.albums.title,
+    albumArtist: r.albums.artist,
+    albumCover: r.albums.cover_url || "https://picsum.photos/seed/default/400/400",
+    userId: r.profiles.id,
+    userName: r.profiles.display_name || r.profiles.username || "User",
+    userAvatar: r.profiles.avatar_url || `https://picsum.photos/seed/${r.profiles.id}/100/100`, // fallback avatar
+    rating: Number(r.rating) || 0,
+    reviewText: r.review_text,
+    likes: 0,
+    comments: 0,
+    date: new Date(r.created_at).toLocaleDateString(),
   })) || []
 
   return (
@@ -112,9 +91,15 @@ export default async function Home() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {sampleReviews.map((review, index) => (
-                <ReviewCard key={index} {...review} />
-              ))}
+              {recentReviews.length > 0 ? (
+                recentReviews.map((review, index) => (
+                  <ReviewCard key={index} {...review} />
+                ))
+              ) : (
+                <p className="text-muted-foreground col-span-3 text-center py-8">
+                  No reviews yet. Be the first to share your thoughts!
+                </p>
+              )}
             </div>
           </div>
         </section>
