@@ -62,7 +62,7 @@ export default async function Home() {
     .from("albums")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(6)
+    .limit(10)
 
   const popularAlbums = albums?.map((album) => ({
     id: album.id,
@@ -79,7 +79,7 @@ export default async function Home() {
       <Header />
 
       <main className="flex-1">
-        <HeroSection isLoggedIn={!!user} />
+        <HeroSection isLoggedIn={!!user} featuredAlbums={popularAlbums} />
 
         {/* Popular Albums */}
         <section className="container mx-auto px-4 py-12">

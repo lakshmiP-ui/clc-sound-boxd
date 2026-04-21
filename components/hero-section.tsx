@@ -2,20 +2,15 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 
-const featuredAlbums = [
-  { id: '1', cover: 'https://picsum.photos/seed/album1/400/400', title: 'Random Access Memories' },
-  { id: '2', cover: 'https://picsum.photos/seed/album2/400/400', title: 'In Rainbows' },
-  { id: '3', cover: 'https://picsum.photos/seed/album3/400/400', title: 'To Pimp a Butterfly' },
-  { id: '4', cover: 'https://picsum.photos/seed/album4/400/400', title: 'Kid A' },
-  { id: '5', cover: 'https://picsum.photos/seed/album5/400/400', title: 'Blonde' },
-  { id: '6', cover: 'https://picsum.photos/seed/album6/400/400', title: 'Rumours' },
-  { id: '7', cover: 'https://picsum.photos/seed/album7/400/400', title: 'Thriller' },
-  { id: '8', cover: 'https://picsum.photos/seed/album8/400/400', title: 'Nevermind' },
-  { id: '9', cover: 'https://picsum.photos/seed/album9/400/400', title: 'Abbey Road' },
-  { id: '10', cover: 'https://picsum.photos/seed/album10/400/400', title: 'OK Computer' },
-]
+// Removed local invalid string-ID mocks
 
-export function HeroSection({ isLoggedIn }: { isLoggedIn?: boolean }) {
+export function HeroSection({ 
+  isLoggedIn, 
+  featuredAlbums = [] 
+}: { 
+  isLoggedIn?: boolean;
+  featuredAlbums?: any[];
+}) {
   return (
     <section className="py-12 md:py-16">
       <div className="container mx-auto px-4">
@@ -53,7 +48,7 @@ export function HeroSection({ isLoggedIn }: { isLoggedIn?: boolean }) {
                   style={{ transform: `rotate(${((i % 5) - 2) * 3}deg)` }}
                 >
                   <Image
-                    src={album.cover}
+                    src={album.coverUrl || album.cover}
                     alt={album.title}
                     fill
                     className="object-cover transition-transform group-hover:scale-105"

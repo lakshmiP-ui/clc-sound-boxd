@@ -99,12 +99,20 @@ export default function AlbumPage({ params }: { params: Promise<{ id: string }> 
       .eq('album_id', albumData.id)
       .maybeSingle()
 
-    const payload = existing ? { ...existing, ...updates, updated_at: new Date().toISOString() } : {
-      user_id: user.id,
-      album_id: albumData.id,
-      ...updates
+    if (existing) {
+      const { error } = await supabase
+        .from('reviews')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', existing.id)
+      
+      if (error) console.error("Error updating review:", error)
+    } else {
+      const { error } = await supabase
+        .from('reviews')
+        .insert({ user_id: user.id, album_id: albumData.id, ...updates })
+
+      if (error) console.error("Error inserting review:", error)
     }
-    await supabase.from('reviews').upsert(payload, { onConflict: 'user_id, album_id' })
   }
 
   const handleLike = async () => {
