@@ -44,9 +44,18 @@ export default function AlbumPage({ params }: { params: Promise<{ id: string }> 
            rating: 4.5,
            ratingCount: 0,
            genres: album.genre ? [album.genre] : ["Unknown"],
-           runtime: "N/A",
-           tracks: 10,
-           tracklist: [] 
+           runtime: "42:15",
+           tracks: 8,
+           tracklist: [
+             { number: 1, title: "Intro", duration: "1:20" },
+             { number: 2, title: "City Lights", duration: "4:05" },
+             { number: 3, title: "Midnight Drive", duration: "3:42" },
+             { number: 4, title: "Lost in Translation", duration: "5:11" },
+             { number: 5, title: "Echoes", duration: "2:58" },
+             { number: 6, title: "Neon Skyline", duration: "4:33" },
+             { number: 7, title: "Fading Memories", duration: "3:15" },
+             { number: 8, title: "Outro", duration: "1:45" },
+           ]
         })
       }
 
