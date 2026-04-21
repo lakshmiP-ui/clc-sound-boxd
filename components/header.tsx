@@ -15,6 +15,8 @@ export function Header() {
   const router = useRouter()
   const supabase = createClient()
 
+  const [searchQuery, setSearchQuery] = useState('')
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -47,6 +49,13 @@ export function Header() {
     router.refresh()
   }
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
@@ -58,16 +67,18 @@ export function Header() {
           </Link>
 
           {/* Search */}
-          <div className="hidden sm:flex flex-1 max-w-sm">
+          <form onSubmit={handleSearch} className="hidden sm:flex flex-1 max-w-sm">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search albums, artists..."
                 className="pl-9 bg-secondary border-0 h-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-          </div>
+          </form>
 
           {/* Nav */}
           <nav className="flex items-center gap-1">
