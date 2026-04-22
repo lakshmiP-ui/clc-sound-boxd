@@ -5,9 +5,9 @@ import { addAlbumFromITunes } from '@/app/search/actions'
 interface ITunesAlbumCardProps {
   title: string
   artist: string
-  coverUrl: string
-  year: number
-  genre: string
+  coverUrl: string | null
+  year: number | null
+  genre: string | null
 }
 
 export function ITunesAlbumCard({ title, artist, coverUrl, year, genre }: ITunesAlbumCardProps) {
@@ -15,7 +15,7 @@ export function ITunesAlbumCard({ title, artist, coverUrl, year, genre }: ITunes
   
   return (
     <form action={addAlbumFromITunes.bind(null, albumData)} className="group relative block aspect-square bg-secondary rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all">
-      <button type="submit" className="w-full h-full text-left focus:outline-none">
+      <button type="submit" className="relative w-full h-full text-left focus:outline-none">
         {coverUrl ? (
           <Image
             src={coverUrl}

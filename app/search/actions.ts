@@ -6,16 +6,19 @@ import { redirect } from 'next/navigation'
 export async function addAlbumFromITunes(albumData: {
   title: string
   artist: string
-  cover_url: string
-  year: number
-  genre: string
+  cover_url: string | null
+  year: number | null
+  genre: string | null
 }) {
+  console.log("SERVER ACTION CALLED: addAlbumFromITunes", albumData)
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
+    console.log("User not logged in, redirecting to login")
     redirect('/auth/login')
   }
+  console.log("User is logged in:", user.id)
   
   // Check if album already exists by case-insensitive title and artist
   const { data: existing } = await supabase
@@ -34,18 +37,18 @@ export async function addAlbumFromITunes(albumData: {
   const { data, error } = await supabase
     .from('albums')
     .insert({
-      title: albumData.title,
-      artist: albumData.artist,
-      cover_url: albumData.cover_url,
-      year: albumData.year,
-      genre: albumData.genre,
+      title: albumData.title || 'Unknown Title',
+      artist: albumData.artist || 'Unknown Artist',
+      cover_url: albumData.cover_url || null,
+      year: albumData.year || null,
+      genre: albumData.genre || null,
     })
     .select('id')
     .single()
     
   if (error || !data) {
-    console.error('Error adding album:', error)
-    throw new Error('Failed to add album')
+    console.error('Error adding album to Supabase:', error)
+    throw new Error('Failed to add album: ' + (error?.message || 'Unknown error'))
   }
 
   redirect(`/album/${data.id}`)

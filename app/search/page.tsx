@@ -43,11 +43,11 @@ export default async function SearchPage({
             })
             .map((item: any) => ({
               id: `itunes-${item.collectionId}`,
-              title: item.collectionName,
-              artist: item.artistName,
-              coverUrl: item.artworkUrl100?.replace('100x100bb', '600x600bb'),
-              year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 0,
-              genre: item.primaryGenreName,
+              title: item.collectionName || 'Unknown Title',
+              artist: item.artistName || 'Unknown Artist',
+              coverUrl: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '600x600bb') : null,
+              year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : null,
+              genre: item.primaryGenreName || null,
             }))
         }
       }
