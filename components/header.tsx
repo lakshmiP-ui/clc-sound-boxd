@@ -63,17 +63,19 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 text-primary shrink-0">
             <Disc3 className="h-6 w-6" />
-            <span className="text-lg font-bold font-[family-name:var(--font-display)]">Soundboxd</span>
+            <span className="hidden md:inline text-lg font-bold font-[family-name:var(--font-display)]">Soundboxd</span>
           </Link>
 
           {/* Search */}
-          <form onSubmit={handleSearch} className="hidden sm:flex flex-1 max-w-sm">
+          <form onSubmit={handleSearch} className="flex flex-1 max-w-sm mx-2">
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center justify-center focus:outline-none">
+                <Search className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+              </button>
               <Input
                 type="search"
-                placeholder="Search albums, artists..."
-                className="pl-9 bg-secondary border-0 h-9"
+                placeholder="Search..."
+                className="pl-9 bg-secondary border-0 h-9 w-full"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -86,19 +88,19 @@ export function Header() {
               <div className="h-8 w-16 bg-secondary animate-pulse rounded-md" />
             ) : user ? (
               <>
-                <Button variant="ghost" size="sm" asChild className="h-8 px-3">
+                <Button variant="ghost" size="sm" asChild className="h-8 w-8 px-0 sm:w-auto sm:px-3">
                   <Link href="/community">
                     <Users className="h-4 w-4 sm:mr-1.5" />
                     <span className="hidden sm:inline">Community</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" size="sm" asChild className="h-8 px-3">
+                <Button variant="ghost" size="sm" asChild className="h-8 w-8 px-0 sm:w-auto sm:px-3">
                   <Link href={`/user/${user.id}`}>
                     <User className="h-4 w-4 sm:mr-1.5" />
                     <span className="hidden sm:inline">Profile</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 px-3">
+                <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 w-8 px-0 sm:w-auto sm:px-3">
                   <LogOut className="h-4 w-4 sm:mr-1.5" />
                   <span className="hidden sm:inline">Sign out</span>
                 </Button>
